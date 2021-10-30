@@ -1,0 +1,29 @@
+{
+  "name": "mock-server",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "mock-server.js",
+  "scripts": {
+    "prepare": "husky install",
+    "start": "node ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "config": {
+    "commit-message-validator": {
+      "pattern": "((feature)|(fix)|(chore)|(update))\\(SB-[1-9]\\d*\\): .*",
+      "errorMessage": "+--------------------------------------------------------------------+\n| Check correct commit message formatting in SmartBrew documentation |\n+--------------------------------------------------------------------+"
+    }
+  },
+  "dependencies": {
+    "body-parser": "^1.19.0",
+    "express": "^4.17.1",
+    "husky": "^7.0.4",
+    "ws": "^8.2.3"
+  },
+  "devDependencies": {
+    "commit-message-validator": "^1.0.2"
+  }
+}

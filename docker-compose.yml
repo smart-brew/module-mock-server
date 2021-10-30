@@ -1,0 +1,10 @@
+version: '2.1'
+services:
+    server:
+        build: .
+        volumes: 
+            - "/usr/src/app"
+        ports:
+            - 9000:9000
+        container_name: mock-server
+        restart: always
