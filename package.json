@@ -5,6 +5,7 @@
   "type": "module",
   "main": "mock-server.js",
   "scripts": {
+    "dev": "nodemon --exec yarn start",
     "format:prettier": "prettier \"**/*.{cjs,html,js,json,md,ts,tsx}\" --write",
     "prepare": "husky install",
     "start": "node ."
@@ -27,6 +28,7 @@
   "devDependencies": {
     "commit-message-validator": "^1.0.2",
     "lint-staged": "^11.2.6",
+    "nodemon": "^2.0.14",
     "prettier": "^2.4.1"
   },
   "lint-staged": {

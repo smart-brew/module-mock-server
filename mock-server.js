@@ -15,7 +15,7 @@ ws.on('message', function incoming(message) {
 });
 
 function createData() {
-  let data = {
+  const data = {
     moduleId: 'test-module-1',
     state: 'ok',
     TEMPERATURE: [
@@ -82,11 +82,14 @@ function createData() {
 }
 
 function sendData() {
-  let data = createData();
+  console.log(`${new Date().toISOString().substring(11, 19)}: Sending data`);
+  const data = createData();
   ws.send(JSON.stringify(data));
 }
 
 ws.onopen = function event() {
+  console.log(`WebSocket connected to: ${BACKEND}\n`);
+  sendData();
   setInterval(sendData, 5000);
 };
 
