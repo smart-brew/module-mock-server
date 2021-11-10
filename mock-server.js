@@ -1,9 +1,12 @@
 import express from 'express';
 import WebSocket from 'ws';
 import ReconnectingWebSocket from 'reconnecting-websocket';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const PORT = 9000;
-const BACKEND = 'ws://localhost:8001';
+const BACKEND = process.env.WS_URL;
 let interval = null;
 
 const options = {
