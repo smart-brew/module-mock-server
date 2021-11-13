@@ -19,20 +19,20 @@ const ws = new ReconnectingWebSocket(BACKEND, [], options);
 
 server.use(express.json());
 
-function createData() {
+function initData() {
   const data = {
     moduleId: 'test-module-1',
     state: 'ok',
     TEMPERATURE: [
       {
-        TEMP: Math.floor(Math.random() * 30 + 10),
-        REGULATION_ENABLED: true,
-        STATE: 'IN_PROGRESS',
+        TEMP: 20,
+        REGULATION_ENABLED: false,
+        STATE: 'WAITING',
         DEVICE: 'TEMP_1',
       },
 
       {
-        TEMP: Math.floor(Math.random() * 30 + 10),
+        TEMP: 20,
         REGULATION_ENABLED: false,
         STATE: 'WAITING',
         DEVICE: 'TEMP_2',
@@ -40,9 +40,9 @@ function createData() {
     ],
     MOTOR: [
       {
-        SPEED: Math.floor(Math.random() * 50 + 20),
-        RPM: Math.floor(Math.random() * 30 + 10),
-        STATE: 'IN_PROGRESS',
+        SPEED: 0,
+        RPM: 0,
+        STATE: 'WAITING',
         DEVICE: 'MOTOR_1',
       },
       {
@@ -54,7 +54,7 @@ function createData() {
     ],
     UNLOADER: [
       {
-        UNLOADED: true,
+        UNLOADED: false,
         STATE: 'WAITING',
         DEVICE: 'FERMENTABLE',
       },
@@ -86,10 +86,57 @@ function createData() {
   return data;
 }
 
+let module_data = initData();
+let tempTarget = null;
+let inst = null;
+let new_inst = 0;
+
+function createData(instruction) {
+  if (instruction.INSTRUCTION === 'SET_TEMPERATURE') {
+    for (let i = 0; i < module_data.TEMPERATURE.length; i++) {
+      if (module_data.TEMPERATURE[i].DEVICE === instruction.DEVICE) {
+        tempTarget = parseInt(instruction.PARAMS);
+
+        if (tempTarget > module_data.TEMPERATURE[i].TEMP) {
+          module_data.TEMPERATURE[i].TEMP += 10;
+          module_data.TEMPERATURE[i].REGULATION_ENABLED = true;
+          module_data.TEMPERATURE[i].STATE = 'IN_PROGRESS';
+        }
+
+        if (tempTarget === module_data.TEMPERATURE[i].TEMP) {
+          module_data.TEMPERATURE[i].REGULATION_ENABLED = false;
+          module_data.TEMPERATURE[i].STATE = 'DONE';
+        }
+
+        if (module_data.TEMPERATURE[i].STATE === 'DONE') {
+          module_data.TEMPERATURE[i].STATE = 'WAITING';
+          tempTarget = null;
+          new_inst = 0;
+        }
+
+        break;
+      }
+    }
+  } else if (instruction.INSTRUCTION === 'SET_MOTOR_SPEED') {
+    for (let i = 0; i < module_data.MOTOR.length; i++) {
+      if (module_data.MOTOR[i].DEVICE === instruction.DEVICE) {
+        module_data.MOTOR[i].SPEED = parseInt(instruction.PARAMS);
+        module_data.MOTOR[i].RPM = parseInt(instruction.PARAMS);
+        break;
+      }
+    }
+  }
+
+  return module_data;
+}
+
 function sendData() {
   console.log(`${new Date().toISOString().substring(11, 19)}: Sending data`);
-  const data = createData();
-  ws.send(JSON.stringify(data));
+  ws.send(JSON.stringify(module_data));
+
+  if (new_inst !== 0) {
+    module_data = createData(inst);
+  }
 }
 
 ws.addEventListener('open', () => {
@@ -98,13 +145,32 @@ ws.addEventListener('open', () => {
   interval = setInterval(sendData, 5000);
 });
 
+function IsJsonString(str) {
+  try {
+    JSON.parse(str);
+  } catch (e) {
+    return false;
+  }
+  return true;
+}
+
 ws.onmessage = function incoming(message) {
-  console.log('%s', message.data);
+  if (IsJsonString(message.data)) {
+    inst = JSON.parse(message.data);
+    console.log('Inštrukcia z backendu.');
+    console.log(inst);
+    new_inst = 1;
+  } else {
+    console.log('%s', message.data);
+  }
 };
 
 ws.onclose = function event() {
   console.log('Socket is closed.');
   clearInterval(interval);
+  tempTarget = null;
+  new_inst = 0;
+  module_data = initData();
 };
 
 server.listen(PORT, function () {
