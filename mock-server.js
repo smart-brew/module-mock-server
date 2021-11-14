@@ -1,119 +1,55 @@
-import express from 'express';
 import WebSocket from 'ws';
 import ReconnectingWebSocket from 'reconnecting-websocket';
 import dotenv from 'dotenv';
 
+import { data } from './data.js';
+
+// load env variables
 dotenv.config();
 
-const PORT = 9000;
 const BACKEND = process.env.WS_URL;
-let interval = null;
+const SENDING_INTERVAL_MS = 3000;
+
+// timer
+let sendingInterval = null;
 
 const options = {
   WebSocket: WebSocket,
   connectionTimeout: 10000,
 };
 
-const server = express();
+// start websocket
 const ws = new ReconnectingWebSocket(BACKEND, [], options);
 
-server.use(express.json());
-
-function initData() {
-  const data = {
-    moduleId: 'test-module-1',
-    state: 'ok',
-    TEMPERATURE: [
-      {
-        TEMP: 20,
-        REGULATION_ENABLED: false,
-        STATE: 'WAITING',
-        DEVICE: 'TEMP_1',
-      },
-
-      {
-        TEMP: 20,
-        REGULATION_ENABLED: false,
-        STATE: 'WAITING',
-        DEVICE: 'TEMP_2',
-      },
-    ],
-    MOTOR: [
-      {
-        SPEED: 0,
-        RPM: 0,
-        STATE: 'WAITING',
-        DEVICE: 'MOTOR_1',
-      },
-      {
-        SPEED: 0,
-        RPM: 0,
-        STATE: 'WAITING',
-        DEVICE: 'MOTOR_2',
-      },
-    ],
-    UNLOADER: [
-      {
-        UNLOADED: false,
-        STATE: 'WAITING',
-        DEVICE: 'FERMENTABLE',
-      },
-      {
-        UNLOADED: false,
-        STATE: 'WAITING',
-        DEVICE: 'YEAST',
-      },
-      {
-        UNLOADED: false,
-        STATE: 'WAITING',
-        DEVICE: 'HOPS',
-      },
-      {
-        UNLOADED: false,
-        STATE: 'WAITING',
-        DEVICE: 'OTHER',
-      },
-    ],
-    PUMP: [
-      {
-        ENABLED: false,
-        STATE: 'WAITING',
-        DEVICE: 'PUMP_1',
-      },
-    ],
-  };
-
-  return data;
-}
-
-let module_data = initData();
+let module_data = data;
 let tempTarget = null;
-let inst = [];
-let new_inst = 0;
-let delay = 0;
+const instructions = [];
+let instructionCount = 0;
+let pumpDelay = 0;
 
-function createData(instruction) {
+function updateData() {
+  if (!instructions.length) return;
+  const instruction = instructions[0];
+
   if (instruction.INSTRUCTION === 'SET_TEMPERATURE') {
     for (let i = 0; i < module_data.TEMPERATURE.length; i++) {
-      if (module_data.TEMPERATURE[i].DEVICE === instruction.DEVICE) {
+      let device = module_data.TEMPERATURE[i];
+
+      if (device.DEVICE === instruction.DEVICE) {
         tempTarget = parseInt(instruction.PARAMS);
 
-        if (tempTarget > module_data.TEMPERATURE[i].TEMP) {
-          module_data.TEMPERATURE[i].TEMP += 10;
-          module_data.TEMPERATURE[i].REGULATION_ENABLED = true;
-          module_data.TEMPERATURE[i].STATE = 'IN_PROGRESS';
-        }
-
-        if (tempTarget === module_data.TEMPERATURE[i].TEMP) {
-          module_data.TEMPERATURE[i].REGULATION_ENABLED = false;
-          module_data.TEMPERATURE[i].STATE = 'DONE';
-        }
-
-        if (module_data.TEMPERATURE[i].STATE === 'DONE') {
-          module_data.TEMPERATURE[i].STATE = 'WAITING';
+        if (tempTarget > device.TEMP) {
+          device.TEMP += 3;
+          device.REGULATION_ENABLED = true;
+          device.STATE = 'IN_PROGRESS';
+        } else if (tempTarget < device.TEMP) {
+          device.REGULATION_ENABLED = false;
+          device.STATE = 'DONE';
+        } else if (device.STATE === 'DONE') {
+          device.STATE = 'WAITING';
           tempTarget = null;
-          new_inst -= 1;
-          inst.shift();
+          instructionCount -= 1;
+          instructions.shift();
         }
 
         break;
@@ -121,56 +57,76 @@ function createData(instruction) {
     }
   } else if (instruction.INSTRUCTION === 'SET_MOTOR_SPEED') {
     for (let i = 0; i < module_data.MOTOR.length; i++) {
-      if (module_data.MOTOR[i].DEVICE === instruction.DEVICE) {
-        module_data.MOTOR[i].SPEED = parseInt(instruction.PARAMS);
-        module_data.MOTOR[i].RPM = parseInt(instruction.PARAMS);
-        new_inst -= 1;
-        inst.shift();
+      let device = module_data.MOTOR[i];
+      if (device.DEVICE === instruction.DEVICE) {
+        if (device.STATE === 'WAITING') {
+          device.SPEED = parseInt(instruction.PARAMS);
+          device.RPM = parseInt(instruction.PARAMS);
+          device.STATE = 'DONE';
+        } else if (device.STATE === 'DONE') {
+          device.STATE = 'WAITING';
+          instructionCount -= 1;
+          instructions.shift();
+        }
+
         break;
       }
     }
   } else if (instruction.INSTRUCTION === 'TRANSFER_LIQUIDS') {
-    if (delay < 3) {
-      module_data.PUMP[0].ENABLED = true;
-      module_data.PUMP[0].STATE = 'IN_PROGRESS';
-      delay++;
+    let device = module_data.PUMP[0];
+    if (pumpDelay < 3) {
+      device.ENABLED = true;
+      device.STATE = 'IN_PROGRESS';
+      pumpDelay++;
     } else {
-      module_data.PUMP[0].ENABLED = false;
-      module_data.PUMP[0].STATE = 'WAITING';
-      new_inst -= 1;
-      delay = 0;
-      inst.shift();
+      device.ENABLED = false;
+      device.STATE = 'WAITING';
+      instructionCount -= 1;
+      pumpDelay = 0;
+      instructions.shift();
     }
   } else if (instruction.INSTRUCTION === 'UNLOAD') {
     for (let i = 0; i < module_data.UNLOADER.length; i++) {
-      if (module_data.UNLOADER[i].DEVICE === instruction.DEVICE) {
-        module_data.UNLOADER[i].UNLOADED = true;
-        new_inst -= 1;
-        inst.shift();
+      let device = module_data.UNLOADER[i];
+      if (device.DEVICE === instruction.DEVICE) {
+        if (device.STATE === 'WAITING') {
+          device.UNLOADED = true;
+          device.STATE = 'DONE';
+        } else if (device.STATE === 'DONE') {
+          device.STATE = 'WAITING';
+          instructionCount -= 1;
+          instructions.shift();
+        }
         break;
       }
     }
   }
+}
+
+function getData() {
+  // add some randomness to data
+  module_data.TEMPERATURE[0].TEMP += Math.random() * 3 - 1.5;
+  module_data.TEMPERATURE[1].TEMP += Math.random() * 3 - 1.5;
+  module_data.MOTOR[0].RPM += Math.random() * 3 - 1.5;
+  module_data.MOTOR[1].RPM += Math.random() * 3 - 1.5;
 
   return module_data;
 }
 
 function sendData() {
-  console.log(`${new Date().toISOString().substring(11, 19)}: Sending data`);
-  ws.send(JSON.stringify(module_data));
+  updateData();
 
-  if (new_inst !== 0) {
-    module_data = createData(inst[0]);
-  }
+  console.log(`${new Date().toISOString().substring(11, 19)} Sending data`);
+  ws.send(JSON.stringify(getData()));
 }
 
 ws.addEventListener('open', () => {
   console.log(`WebSocket connected to: ${BACKEND}\n`);
   sendData();
-  interval = setInterval(sendData, 5000);
+  sendingInterval = setInterval(sendData, SENDING_INTERVAL_MS);
 });
 
-function IsJsonString(str) {
+function isJsonString(str) {
   try {
     JSON.parse(str);
   } catch (e) {
@@ -180,11 +136,11 @@ function IsJsonString(str) {
 }
 
 ws.onmessage = function incoming(message) {
-  if (IsJsonString(message.data)) {
-    inst[new_inst] = JSON.parse(message.data);
+  if (isJsonString(message.data)) {
+    instructions.push(JSON.parse(message.data));
     console.log('Inštrukcia z backendu.');
-    console.log(inst[new_inst]);
-    new_inst += 1;
+    console.log(instructions[instructionCount]);
+    instructionCount += 1;
   } else {
     console.log('%s', message.data);
   }
@@ -192,12 +148,11 @@ ws.onmessage = function incoming(message) {
 
 ws.onclose = function event() {
   console.log('Socket is closed.');
-  clearInterval(interval);
-  tempTarget = null;
-  new_inst = 0;
-  module_data = initData();
-};
 
-server.listen(PORT, function () {
-  console.log('HTTP Server is running on PORT:', PORT);
-});
+  clearInterval(sendingInterval);
+
+  instructions.slice();
+  tempTarget = null;
+  instructionCount = 0;
+  module_data = data;
+};
