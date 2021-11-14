@@ -88,8 +88,9 @@ function initData() {
 
 let module_data = initData();
 let tempTarget = null;
-let inst = null;
+let inst = [];
 let new_inst = 0;
+let delay = 0;
 
 function createData(instruction) {
   if (instruction.INSTRUCTION === 'SET_TEMPERATURE') {
@@ -111,7 +112,8 @@ function createData(instruction) {
         if (module_data.TEMPERATURE[i].STATE === 'DONE') {
           module_data.TEMPERATURE[i].STATE = 'WAITING';
           tempTarget = null;
-          new_inst = 0;
+          new_inst -= 1;
+          inst.shift();
         }
 
         break;
@@ -122,6 +124,29 @@ function createData(instruction) {
       if (module_data.MOTOR[i].DEVICE === instruction.DEVICE) {
         module_data.MOTOR[i].SPEED = parseInt(instruction.PARAMS);
         module_data.MOTOR[i].RPM = parseInt(instruction.PARAMS);
+        new_inst -= 1;
+        inst.shift();
+        break;
+      }
+    }
+  } else if (instruction.INSTRUCTION === 'TRANSFER_LIQUIDS') {
+    if (delay < 3) {
+      module_data.PUMP[0].ENABLED = true;
+      module_data.PUMP[0].STATE = 'IN_PROGRESS';
+      delay++;
+    } else {
+      module_data.PUMP[0].ENABLED = false;
+      module_data.PUMP[0].STATE = 'WAITING';
+      new_inst -= 1;
+      delay = 0;
+      inst.shift();
+    }
+  } else if (instruction.INSTRUCTION === 'UNLOAD') {
+    for (let i = 0; i < module_data.UNLOADER.length; i++) {
+      if (module_data.UNLOADER[i].DEVICE === instruction.DEVICE) {
+        module_data.UNLOADER[i].UNLOADED = true;
+        new_inst -= 1;
+        inst.shift();
         break;
       }
     }
@@ -135,7 +160,7 @@ function sendData() {
   ws.send(JSON.stringify(module_data));
 
   if (new_inst !== 0) {
-    module_data = createData(inst);
+    module_data = createData(inst[0]);
   }
 }
 
@@ -156,10 +181,10 @@ function IsJsonString(str) {
 
 ws.onmessage = function incoming(message) {
   if (IsJsonString(message.data)) {
-    inst = JSON.parse(message.data);
+    inst[new_inst] = JSON.parse(message.data);
     console.log('Inštrukcia z backendu.');
-    console.log(inst);
-    new_inst = 1;
+    console.log(inst[new_inst]);
+    new_inst += 1;
   } else {
     console.log('%s', message.data);
   }
