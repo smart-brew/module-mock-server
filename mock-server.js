@@ -27,6 +27,14 @@ const instructions = [];
 let instructionCount = 0;
 let pumpDelay = 0;
 
+function wait(ms) {
+  let start = new Date().getTime();
+  let end = start;
+  while (end < start + ms) {
+    end = new Date().getTime();
+  }
+}
+
 function updateData() {
   if (!instructions.length) return;
   const instruction = instructions[0];
@@ -100,6 +108,23 @@ function updateData() {
         break;
       }
     }
+  } else if (instruction.INSTRUCTION === 'WAIT') {
+    let wait_ms = parseFloat(instruction.PARAMS);
+    let device = module_data.TIMER[0];
+    device.REMAINING = wait_ms / 1000;
+    device.STATE = 'IN_PROGRESS';
+    if (device.REMAINING > 0) {
+      device.REMAINING -= SENDING_INTERVAL_MS / 1000;
+    } else {
+      device.REMAINING = 0;
+      device.STATE = 'WAITING';
+      instructionCount -= 1;
+      instructions.shift();
+    }
+  } else if (instruction.INSTRUCTION === 'MANUAL') {
+    wait(5000);
+    instructionCount -= 1;
+    instructions.shift();
   }
 }
 

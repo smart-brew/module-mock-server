@@ -59,4 +59,11 @@ export const data = {
       DEVICE: 'PUMP_1',
     },
   ],
+  TIMER: [
+    {
+      REMAINING: 0,
+      STATE: 'WAITING',
+      DEVICE: 'TIMER',
+    },
+  ],
 };
