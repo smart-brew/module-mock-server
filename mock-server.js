@@ -15,6 +15,7 @@ let sendingInterval = null;
 
 const options = {
   WebSocket: WebSocket,
+  //debug: true,
   connectionTimeout: 10000,
 };
 
@@ -128,6 +129,13 @@ function updateData() {
   }
 }
 
+function finish() {
+  instructions.slice();
+  tempTarget = null;
+  instructionCount = 0;
+  module_data = data;
+}
+
 function getData() {
   // add some randomness to data
   module_data.TEMPERATURE[0].TEMP += Math.random() * 3 - 1.5;
@@ -162,10 +170,18 @@ function isJsonString(str) {
 
 ws.onmessage = function incoming(message) {
   if (isJsonString(message.data)) {
-    instructions.push(JSON.parse(message.data));
-    console.log('Inštrukcia z backendu.');
-    console.log(instructions[instructionCount]);
-    instructionCount += 1;
+    if (JSON.parse(message.data).hasOwnProperty('type')) {
+      console.log(JSON.parse(message.data));
+      if (message.data === '{"type":"abort"}') {
+        console.log('Varenie bolo prerušené!');
+        finish();
+      }
+    } else {
+      instructions.push(JSON.parse(message.data));
+      console.log('Inštrukcia z backendu.');
+      console.log(instructions[instructionCount]);
+      instructionCount += 1;
+    }
   } else {
     console.log('%s', message.data);
   }
@@ -173,11 +189,6 @@ ws.onmessage = function incoming(message) {
 
 ws.onclose = function event() {
   console.log('Socket is closed.');
-
   clearInterval(sendingInterval);
-
-  instructions.slice();
-  tempTarget = null;
-  instructionCount = 0;
-  module_data = data;
+  finish();
 };
