@@ -140,8 +140,8 @@ function getData() {
   // add some randomness to data
   module_data.TEMPERATURE[0].TEMP += Math.random() * 3 - 1.5;
   module_data.TEMPERATURE[1].TEMP += Math.random() * 3 - 1.5;
-  module_data.MOTOR[0].RPM += Math.random() * 3 - 1.5;
-  module_data.MOTOR[1].RPM += Math.random() * 3 - 1.5;
+  module_data.MOTOR[0].RPM += Math.random() * 3 - 0.5;
+  module_data.MOTOR[1].RPM += Math.random() * 3 - 0.5;
 
   return module_data;
 }
@@ -170,14 +170,15 @@ function isJsonString(str) {
 
 ws.onmessage = function incoming(message) {
   if (isJsonString(message.data)) {
-    if (JSON.parse(message.data).hasOwnProperty('type')) {
-      console.log(JSON.parse(message.data));
-      if (message.data === '{"type":"abort"}') {
+    let incomingInstruction = JSON.parse(message.data);
+    if (incomingInstruction.hasOwnProperty('type')) {
+      console.log(incomingInstruction);
+      if (incomingInstruction.type === 'abort') {
         console.log('Varenie bolo prerušené!');
         finish();
       }
     } else {
-      instructions.push(JSON.parse(message.data));
+      instructions.push(incomingInstruction);
       console.log('Inštrukcia z backendu.');
       console.log(instructions[instructionCount]);
       instructionCount += 1;
