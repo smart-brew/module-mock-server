@@ -1,5 +1,5 @@
 export const data = {
-  moduleId: 2,
+  moduleId: 1,
   status: 'ok',
   TEMPERATURE: [
     {
