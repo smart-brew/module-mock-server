@@ -40,12 +40,12 @@ function updateData() {
   if (!instructions.length) return;
   const instruction = instructions[0];
 
-  if (instruction.INSTRUCTION === 'SET_TEMPERATURE') {
+  if (instruction.instruction === 'SET_TEMPERATURE') {
     for (let i = 0; i < module_data.TEMPERATURE.length; i++) {
       let device = module_data.TEMPERATURE[i];
 
-      if (device.DEVICE === instruction.DEVICE) {
-        tempTarget = parseInt(instruction.PARAMS);
+      if (device.DEVICE === instruction.device) {
+        tempTarget = parseInt(instruction.params);
 
         if (tempTarget > device.TEMP) {
           device.TEMP += 3;
@@ -64,13 +64,13 @@ function updateData() {
         break;
       }
     }
-  } else if (instruction.INSTRUCTION === 'SET_MOTOR_SPEED') {
+  } else if (instruction.instruction === 'SET_MOTOR_SPEED') {
     for (let i = 0; i < module_data.MOTOR.length; i++) {
       let device = module_data.MOTOR[i];
-      if (device.DEVICE === instruction.DEVICE) {
+      if (device.DEVICE === instruction.device) {
         if (device.STATE === 'WAITING') {
-          device.SPEED = parseInt(instruction.PARAMS);
-          device.RPM = parseInt(instruction.PARAMS);
+          device.SPEED = parseInt(instruction.params);
+          device.RPM = parseInt(instruction.params);
           device.STATE = 'DONE';
         } else if (device.STATE === 'DONE') {
           device.STATE = 'WAITING';
@@ -81,7 +81,7 @@ function updateData() {
         break;
       }
     }
-  } else if (instruction.INSTRUCTION === 'TRANSFER_LIQUIDS') {
+  } else if (instruction.instruction === 'TRANSFER_LIQUIDS') {
     let device = module_data.PUMP[0];
     if (pumpDelay < 3) {
       device.ENABLED = true;
@@ -94,10 +94,10 @@ function updateData() {
       pumpDelay = 0;
       instructions.shift();
     }
-  } else if (instruction.INSTRUCTION === 'UNLOAD') {
+  } else if (instruction.instruction === 'UNLOAD') {
     for (let i = 0; i < module_data.UNLOADER.length; i++) {
       let device = module_data.UNLOADER[i];
-      if (device.DEVICE === instruction.DEVICE) {
+      if (device.DEVICE === instruction.device) {
         if (device.STATE === 'WAITING') {
           device.UNLOADED = true;
           device.STATE = 'DONE';
@@ -109,8 +109,8 @@ function updateData() {
         break;
       }
     }
-  } else if (instruction.INSTRUCTION === 'WAIT') {
-    let wait_ms = parseFloat(instruction.PARAMS);
+  } else if (instruction.instruction === 'WAIT') {
+    let wait_ms = parseFloat(instruction.params);
     let device = module_data.TIMER[0];
     device.REMAINING = wait_ms / 1000;
     device.STATE = 'IN_PROGRESS';
@@ -122,7 +122,7 @@ function updateData() {
       instructionCount -= 1;
       instructions.shift();
     }
-  } else if (instruction.INSTRUCTION === 'MANUAL') {
+  } else if (instruction.instruction === 'MANUAL') {
     wait(5000);
     instructionCount -= 1;
     instructions.shift();
@@ -171,17 +171,16 @@ function isJsonString(str) {
 ws.onmessage = function incoming(message) {
   if (isJsonString(message.data)) {
     let incomingInstruction = JSON.parse(message.data);
-    if (incomingInstruction.hasOwnProperty('type')) {
-      console.log(incomingInstruction);
-      if (incomingInstruction.type === 'abort') {
-        console.log('Varenie bolo prerušené!');
-        finish();
-      }
-    } else {
+    if (incomingInstruction.type === 'instruction') {
       instructions.push(incomingInstruction);
       console.log('Inštrukcia z backendu.');
       console.log(instructions[instructionCount]);
       instructionCount += 1;
+    } else if (incomingInstruction.type === 'abort') {
+      console.log('Varenie bolo prerušené!');
+      finish();
+    } else {
+      console.log('%s', incomingInstruction);
     }
   } else {
     console.log('%s', message.data);
