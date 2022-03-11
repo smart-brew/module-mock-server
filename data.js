@@ -1,6 +1,6 @@
 export const data = {
   moduleId: 2,
-  state: 'ok',
+  status: 'ok',
   TEMPERATURE: [
     {
       TEMP: 20,
