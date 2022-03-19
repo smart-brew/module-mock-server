@@ -51,7 +51,7 @@ function updateData() {
           device.TEMP += 3;
           device.REGULATION_ENABLED = true;
           device.STATE = 'IN_PROGRESS';
-        } else if (tempTarget < device.TEMP) {
+        } else if (tempTarget < device.TEMP && device.STATE === 'IN_PROGRESS') {
           device.REGULATION_ENABLED = false;
           device.STATE = 'DONE';
         } else if (device.STATE === 'DONE') {
@@ -87,12 +87,14 @@ function updateData() {
       device.ENABLED = true;
       device.STATE = 'IN_PROGRESS';
       pumpDelay++;
-    } else {
+    } else if (device.STATE === 'IN_PROGRESS' && pumpDelay >= 3) {
       device.ENABLED = false;
+      device.STATE = 'DONE';
+    } else if (device.STATE === 'DONE') {
       device.STATE = 'WAITING';
       instructionCount -= 1;
-      pumpDelay = 0;
       instructions.shift();
+      pumpDelay = 0;
     }
   } else if (instruction.instruction === 'UNLOAD') {
     for (let i = 0; i < module_data.UNLOADER.length; i++) {
@@ -116,8 +118,10 @@ function updateData() {
     device.STATE = 'IN_PROGRESS';
     if (device.REMAINING > 0) {
       device.REMAINING -= SENDING_INTERVAL_MS / 1000;
-    } else {
+    } else if (device.REMAINING <= 0 && device.STATE === 'IN_PROGRESS') {
       device.REMAINING = 0;
+      device.STATE = 'DONE';
+    } else if (device.STATE === 'DONE') {
       device.STATE = 'WAITING';
       instructionCount -= 1;
       instructions.shift();
@@ -140,8 +144,8 @@ function getData() {
   // add some randomness to data
   module_data.TEMPERATURE[0].TEMP += Math.random() * 3 - 1.5;
   module_data.TEMPERATURE[1].TEMP += Math.random() * 3 - 1.5;
-  module_data.MOTOR[0].RPM += Math.random() * 3 - 0.5;
-  module_data.MOTOR[1].RPM += Math.random() * 3 - 0.5;
+  module_data.MOTOR[0].RPM += Math.random() * 3 - 1.5;
+  module_data.MOTOR[1].RPM += Math.random() * 3 - 1.5;
 
   return module_data;
 }
