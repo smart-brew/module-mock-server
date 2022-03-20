@@ -4,6 +4,10 @@ import dotenv from 'dotenv';
 
 import { data } from './data.js';
 
+const IN_PROGRESS = 'IN_PROGRESS';
+const WAITING = 'WAITING';
+const DONE = 'DONE';
+
 // load env variables
 dotenv.config();
 
@@ -50,12 +54,12 @@ function updateData() {
         if (tempTarget > device.TEMP) {
           device.TEMP += 3;
           device.REGULATION_ENABLED = true;
-          device.STATE = 'IN_PROGRESS';
-        } else if (tempTarget < device.TEMP && device.STATE === 'IN_PROGRESS') {
+          device.STATE = IN_PROGRESS;
+        } else if (tempTarget < device.TEMP && device.STATE === IN_PROGRESS) {
           device.REGULATION_ENABLED = false;
-          device.STATE = 'DONE';
-        } else if (device.STATE === 'DONE') {
-          device.STATE = 'WAITING';
+          device.STATE = DONE;
+        } else if (device.STATE === DONE) {
+          device.STATE = WAITING;
           tempTarget = null;
           instructionCount -= 1;
           instructions.shift();
@@ -68,12 +72,12 @@ function updateData() {
     for (let i = 0; i < module_data.MOTOR.length; i++) {
       let device = module_data.MOTOR[i];
       if (device.DEVICE === instruction.device) {
-        if (device.STATE === 'WAITING') {
+        if (device.STATE === WAITING) {
           device.SPEED = parseInt(instruction.params);
           device.RPM = parseInt(instruction.params);
-          device.STATE = 'DONE';
-        } else if (device.STATE === 'DONE') {
-          device.STATE = 'WAITING';
+          device.STATE = DONE;
+        } else if (device.STATE === DONE) {
+          device.STATE = WAITING;
           instructionCount -= 1;
           instructions.shift();
         }
@@ -85,13 +89,13 @@ function updateData() {
     let device = module_data.PUMP[0];
     if (pumpDelay < 3) {
       device.ENABLED = true;
-      device.STATE = 'IN_PROGRESS';
+      device.STATE = IN_PROGRESS;
       pumpDelay++;
-    } else if (device.STATE === 'IN_PROGRESS' && pumpDelay >= 3) {
+    } else if (device.STATE === IN_PROGRESS && pumpDelay >= 3) {
       device.ENABLED = false;
-      device.STATE = 'DONE';
-    } else if (device.STATE === 'DONE') {
-      device.STATE = 'WAITING';
+      device.STATE = DONE;
+    } else if (device.STATE === DONE) {
+      device.STATE = WAITING;
       instructionCount -= 1;
       instructions.shift();
       pumpDelay = 0;
@@ -100,11 +104,11 @@ function updateData() {
     for (let i = 0; i < module_data.UNLOADER.length; i++) {
       let device = module_data.UNLOADER[i];
       if (device.DEVICE === instruction.device) {
-        if (device.STATE === 'WAITING') {
+        if (device.STATE === WAITING) {
           device.UNLOADED = true;
-          device.STATE = 'DONE';
-        } else if (device.STATE === 'DONE') {
-          device.STATE = 'WAITING';
+          device.STATE = DONE;
+        } else if (device.STATE === DONE) {
+          device.STATE = WAITING;
           instructionCount -= 1;
           instructions.shift();
         }
@@ -112,17 +116,22 @@ function updateData() {
       }
     }
   } else if (instruction.instruction === 'WAIT') {
-    let wait_ms = parseFloat(instruction.params);
-    let device = module_data.TIMER[0];
-    device.REMAINING = wait_ms / 1000;
-    device.STATE = 'IN_PROGRESS';
-    if (device.REMAINING > 0) {
+    const wait_ms = parseFloat(instruction.params);
+    const device = module_data.TIMER[0];
+
+    // initial set
+    if (device.REMAINING === 0 && device.STATE === WAITING) {
+      device.REMAINING = wait_ms / 1000;
+      device.STATE = IN_PROGRESS;
+    }
+
+    if (device.REMAINING > 0 && device.STATE === IN_PROGRESS) {
       device.REMAINING -= SENDING_INTERVAL_MS / 1000;
-    } else if (device.REMAINING <= 0 && device.STATE === 'IN_PROGRESS') {
+    } else if (device.REMAINING <= 0 && device.STATE === IN_PROGRESS) {
       device.REMAINING = 0;
-      device.STATE = 'DONE';
-    } else if (device.STATE === 'DONE') {
-      device.STATE = 'WAITING';
+      device.STATE = DONE;
+    } else if (device.STATE === DONE) {
+      device.STATE = WAITING;
       instructionCount -= 1;
       instructions.shift();
     }
