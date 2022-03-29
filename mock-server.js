@@ -12,7 +12,7 @@ const DONE = 'DONE';
 dotenv.config();
 
 const BACKEND = process.env.WS_URL;
-const SENDING_INTERVAL_MS = 3000;
+const SENDING_INTERVAL_MS = process.env.SENDING_INTERVAL_MS;
 
 // timer
 let sendingInterval = null;
@@ -167,7 +167,9 @@ function sendData() {
 }
 
 ws.addEventListener('open', () => {
-  console.log(`WebSocket connected to: ${BACKEND}\n`);
+  console.log(`WebSocket connected to: ${BACKEND}`);
+  console.log(`Sending interval: ${SENDING_INTERVAL_MS}\n`);
+
   sendData();
   sendingInterval = setInterval(sendData, SENDING_INTERVAL_MS);
 });

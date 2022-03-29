@@ -4,8 +4,6 @@ services:
     environment:
       - WS_URL=ws://host.docker.internal:8001
     build: .
-    volumes:
-      - '/usr/src/app'
     ports:
       - 9000:9000
     container_name: mock-server
