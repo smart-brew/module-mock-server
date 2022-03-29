@@ -7,6 +7,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
     ports:
       - 9000:9000
     container_name: mock-server

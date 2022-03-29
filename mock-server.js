@@ -203,7 +203,7 @@ ws.onmessage = function incoming(message) {
 };
 
 ws.onclose = function event() {
-  console.log('Socket is closed.');
+  console.log(`Socket is closed. (${BACKEND})`);
   clearInterval(sendingInterval);
   finish();
 };
