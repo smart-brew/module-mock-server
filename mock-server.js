@@ -117,7 +117,7 @@ function updateData() {
     }
   } else if (instruction.instruction === 'WAIT') {
     const wait_ms = parseFloat(instruction.params);
-    const device = module_data.TIMER[0];
+    const device = module_data.SYSTEM[0];
 
     // initial set
     if (device.REMAINING === 0 && device.STATE === WAITING) {
