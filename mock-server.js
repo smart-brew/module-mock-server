@@ -28,6 +28,8 @@ const ws = new ReconnectingWebSocket(BACKEND, [], options);
 
 let module_data = data;
 let tempTarget = null;
+let heating = false;
+let cooling = false;
 const instructions = [];
 let instructionCount = 0;
 let pumpDelay = 0;
@@ -51,13 +53,28 @@ function updateData() {
       if (device.DEVICE === instruction.device) {
         tempTarget = parseInt(instruction.params);
 
-        if (tempTarget > device.TEMP) {
+        if (tempTarget > device.TEMP && device.STATE === WAITING) {
+          heating = true;
+        } else if (tempTarget < device.TEMP && device.STATE === WAITING) {
+          cooling = true;
+        }
+
+        if (heating && tempTarget > device.TEMP) {
           device.TEMP += 3;
           device.REGULATION_ENABLED = true;
           device.STATE = IN_PROGRESS;
-        } else if (tempTarget < device.TEMP && device.STATE === IN_PROGRESS) {
+        } else if (cooling && tempTarget < device.TEMP) {
+          device.TEMP -= 3;
+          device.REGULATION_ENABLED = true;
+          device.STATE = IN_PROGRESS;
+        } else if (heating && tempTarget < device.TEMP && device.STATE === IN_PROGRESS) {
           device.REGULATION_ENABLED = false;
           device.STATE = DONE;
+          heating = false;
+        } else if (cooling && tempTarget > device.TEMP && device.STATE === IN_PROGRESS) {
+          device.REGULATION_ENABLED = false;
+          device.STATE = DONE;
+          cooling = false;
         } else if (device.STATE === DONE) {
           device.STATE = WAITING;
           tempTarget = null;
