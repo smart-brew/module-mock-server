@@ -160,10 +160,10 @@ function updateData() {
 }
 
 function finish() {
-  instructions.slice();
+  instructions.splice(0, instructionCount);
   tempTarget = null;
   instructionCount = 0;
-  module_data = data;
+  module_data = JSON.parse(JSON.stringify(data));
 }
 
 function getData() {
