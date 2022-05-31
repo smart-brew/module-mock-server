@@ -67,11 +67,19 @@ function updateData() {
           device.TEMP -= 3;
           device.REGULATION_ENABLED = true;
           device.STATE = IN_PROGRESS;
-        } else if (heating && tempTarget < device.TEMP && device.STATE === IN_PROGRESS) {
+        } else if (
+          heating &&
+          tempTarget < device.TEMP &&
+          device.STATE === IN_PROGRESS
+        ) {
           device.REGULATION_ENABLED = false;
           device.STATE = DONE;
           heating = false;
-        } else if (cooling && tempTarget > device.TEMP && device.STATE === IN_PROGRESS) {
+        } else if (
+          cooling &&
+          tempTarget > device.TEMP &&
+          device.STATE === IN_PROGRESS
+        ) {
           device.REGULATION_ENABLED = false;
           device.STATE = DONE;
           cooling = false;
@@ -168,8 +176,10 @@ function finish() {
 
 function getData() {
   // add some randomness to data
-  module_data.TEMPERATURE[0].TEMP += Math.random() * 3 - 1.5;
-  module_data.TEMPERATURE[1].TEMP += Math.random() * 3 - 1.5;
+  module_data.TEMPERATURE[0].temp0 += Math.random() * 3 - 1.5;
+  module_data.TEMPERATURE[0].temp1 += Math.random() * 3 - 1.5;
+  module_data.TEMPERATURE[0].temp2 += Math.random() * 3 - 1.5;
+  module_data.TEMPERATURE[0].temp3 += Math.random() * 3 - 1.5;
   module_data.MOTOR[0].RPM += Math.random() * 3 - 1.5;
   module_data.MOTOR[1].RPM += Math.random() * 3 - 1.5;
 

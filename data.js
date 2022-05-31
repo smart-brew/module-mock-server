@@ -7,13 +7,10 @@ export const data = {
       REGULATION_ENABLED: false,
       STATE: 'WAITING',
       DEVICE: 'TEMP_1',
-    },
-
-    {
-      TEMP: 20,
-      REGULATION_ENABLED: false,
-      STATE: 'WAITING',
-      DEVICE: 'TEMP_2',
+      temp0: 20,
+      temp1: 20,
+      temp2: 20,
+      temp3: 20,
     },
   ],
   MOTOR: [
